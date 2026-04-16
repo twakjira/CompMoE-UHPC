@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CompMoE-CFI: Compositional Mixture-of-Experts for UHPC Compressive Strength Prediction and Sustainable Mix Optimization</title>
+<meta name="description" content="CompMoE-CFI: a novel compositional mixture-of-experts neural network for UHPC 28-day compressive strength prediction and multi-objective sustainable mix design optimization.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
+<script defer src="inference.js"></script>
+
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Noto Sans', sans-serif; font-size: 1.05rem; line-height: 1.7; color: #333; background: #fff; -webkit-font-smoothing: antialiased; }
+  a { color: #4A90D9; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  :root { --accent: #4A90D9; --accent-2: #3b7bc9; --green: #2aa876; }
+
+  .section { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .section.wide { max-width: 1080px; }
+
+  .title-section { text-align: center; padding-top: 4rem; padding-bottom: 1.5rem; }
+  .project-title { font-size: clamp(1.7rem, 3vw, 2.4rem); font-weight: 700; line-height: 1.3; color: #222; margin-bottom: 1.2rem; letter-spacing: -0.01em; }
+  .project-title .accent { color: var(--accent); }
+  .authors { font-size: 1.15rem; margin-bottom: 0.5rem; }
+  .authors a { font-weight: 500; color: var(--accent); }
+  .affiliations { font-size: 0.92rem; color: #777; margin-bottom: 0.8rem; }
+  .affiliations span { margin: 0 0.5rem; white-space: nowrap; }
+
+  .buttons-row { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.58rem 1.35rem; font-size: 0.95rem; font-weight: 500; color: #333; background: #fff; border: 1.5px solid #d0d0d0; border-radius: 8px; text-decoration: none; transition: border-color 0.15s, background 0.15s, transform 0.15s; font-family: 'Noto Sans', sans-serif; }
+  .btn:hover { border-color: var(--accent); background: #f7faff; text-decoration: none; transform: translateY(-1px); }
+  .btn-disabled { opacity: 0.55; cursor: default; pointer-events: none; }
+  .btn-note { font-size: 0.78rem; color: #999; font-weight: 400; }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: white; }
+
+  h2 { font-size: 1.8rem; font-weight: 600; color: #222; margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 2px solid #eee; letter-spacing: -0.01em; }
+  .abstract-text { text-align: justify; hyphens: auto; }
+
+  .module-list { margin-top: 1.2rem; display: grid; gap: 0.7rem; }
+  .module-list p { margin: 0; padding: 0.4rem 0 0.4rem 0.8rem; border-left: 3px solid var(--accent); line-height: 1.6; }
+  .module-list p strong { color: #1f2937; font-weight: 600; }
+
+  .results-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem; }
+  .results-table th { text-align: left; padding: 0.65rem 0.8rem; font-weight: 600; background: #f8f9fa; border-bottom: 2px solid #ddd; color: #333; }
+  .results-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #eee; }
+  .results-table tr:hover td { background: #f8fbff; }
+
+  .mix-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .mix-card { background: #f8f9fa; border: 1px solid #e6e8ec; border-radius: 12px; padding: 1.2rem; transition: transform 0.15s, box-shadow 0.15s; }
+  .mix-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(15,23,42,0.08); }
+  .mix-card h3 { font-size: 1rem; font-weight: 600; color: var(--accent); margin-bottom: 0.5rem; }
+  .mix-card .stat { font-size: 0.88rem; color: #555; margin-bottom: 0.2rem; }
+  .mix-card .stat strong { color: #222; }
+
+  .caption { font-size: 0.92rem; color: #666; text-align: center; margin: 0.6rem 0 1rem 0; line-height: 1.55; }
+  footer { text-align: center; font-size: 0.88rem; color: #999; padding: 3rem 1rem 2rem; border-top: 1px solid #eee; margin-top: 3rem; }
+
+  /* Interactive tool */
+  .demo-wrapper { max-width: 1080px; margin: 3rem auto 1.5rem; padding: 0 1.5rem; }
+  .demo-section {
+    position: relative;
+    background: radial-gradient(900px 400px at 90% -20%, rgba(74,144,217,0.10) 0%, transparent 60%),
+                radial-gradient(700px 300px at 0% 120%, rgba(42,168,118,0.08) 0%, transparent 60%),
+                linear-gradient(180deg, #f3f7fc 0%, #eef4fb 50%, #eaf2fa 100%);
+    padding: 2.8rem 2rem 3rem; border-radius: 22px;
+    border: 1px solid rgba(74,144,217,0.22); color: #222; overflow: hidden;
+    box-shadow: 0 18px 50px -18px rgba(30,58,138,0.18), 0 0 0 1px rgba(255,255,255,0.6) inset;
+  }
+  .demo-section::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(74,144,217,0.12) 1px, transparent 1px);
+    background-size: 22px 22px; pointer-events: none;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.45), transparent 80%); border-radius: 22px;
+  }
+  .demo-section::after {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #4A90D9 0%, #60a5fa 25%, #2aa876 50%, #60a5fa 75%, #4A90D9 100%);
+    background-size: 300% 100%; animation: stripeShimmer 9s ease-in-out infinite;
+    border-radius: 22px 22px 0 0; pointer-events: none;
+  }
+  @keyframes stripeShimmer { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 0%; } }
+  .demo-inner { position: relative; }
+  .demo-header { text-align: center; margin-bottom: 2rem; padding-bottom: 1.4rem; border-bottom: 1px solid rgba(74,144,217,0.18); }
+  .demo-kicker {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: #1d4ed8; background: linear-gradient(135deg, rgba(74,144,217,0.12) 0%, rgba(42,168,118,0.10) 100%);
+    border: 1px solid rgba(74,144,217,0.28); padding: 6px 14px; border-radius: 999px; margin-bottom: 1.1rem;
+  }
+  .live-dot { width: 8px; height: 8px; border-radius: 999px; background: #2aa876; animation: livePulse 1.8s infinite; }
+  @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(42,168,118,0.55); } 70% { box-shadow: 0 0 0 8px rgba(42,168,118,0); } 100% { box-shadow: 0 0 0 0 rgba(42,168,118,0); } }
+  .demo-header h2 { border-bottom: none !important; color: #1a2a4a !important; font-size: 1.95rem !important; margin: 0 0 0.5rem 0 !important; padding: 0 !important; }
+  .demo-header p { color: #52607a; max-width: 640px; margin: 0 auto; font-size: 0.98rem; line-height: 1.55; }
+  .demo-surface { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 1.4rem 1.6rem; margin-bottom: 1.1rem; box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 20px -14px rgba(15,23,42,0.14); }
+  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #555; display: flex; align-items: center; gap: 0.55rem; margin-bottom: 1rem; }
+  .section-label::before { content: ""; display: inline-block; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .field-label { font-size: 0.85rem; color: #444; font-weight: 500; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; }
+  .field-unit { font-size: 0.78rem; color: #999; }
+  .field-input { width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid #ddd; border-radius: 8px; background: white; font-size: 0.94rem; font-variant-numeric: tabular-nums; transition: border-color 0.15s, box-shadow 0.15s; font-family: 'Noto Sans', sans-serif; }
+  .field-input:hover { border-color: #bbb; }
+  .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(74,144,217,0.14); }
+  .group-heading { font-size: 0.72rem; font-weight: 700; color: #777; text-transform: uppercase; letter-spacing: 0.14em; padding-bottom: 0.55rem; margin-bottom: 0.9rem; border-bottom: 1px solid #eee; }
+  .grid { display: grid; gap: 0.75rem; }
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 800px) { .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid-3 { grid-template-columns: 1fr; } }
+  .metric-card { background: white; border: 1px solid #eaeaea; border-radius: 12px; padding: 1.1rem 1.25rem; }
+  .metric-card .label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #777; margin-bottom: 0.4rem; }
+  .metric-card .value { font-size: 1.85rem; font-weight: 700; color: #1f2937; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .metric-card .unit { font-size: 0.9rem; color: #777; margin-left: 0.3rem; font-weight: 500; }
+  .metric-card.primary { background: var(--accent); border-color: var(--accent); }
+  .metric-card.primary .label { color: rgba(255,255,255,0.85); }
+  .metric-card.primary .value, .metric-card.primary .unit { color: white; }
+  .metric-card.accent-green { background: #2aa876; border-color: #2aa876; }
+  .metric-card.accent-green .label { color: rgba(255,255,255,0.85); }
+  .metric-card.accent-green .value, .metric-card.accent-green .unit { color: white; }
+  .btn-predict { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.9rem 2.2rem; font-size: 1rem; font-weight: 600; color: white; background: linear-gradient(135deg, #1d4ed8 0%, #4A90D9 100%); border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 6px 20px rgba(74,144,217,0.35); transition: transform 0.15s, box-shadow 0.15s; font-family: 'Noto Sans', sans-serif; }
+  .btn-predict:hover { background: linear-gradient(135deg, #1e3a8a 0%, #3b7bc9 100%); transform: translateY(-1px); box-shadow: 0 10px 28px rgba(30,58,138,0.45); }
+  .chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+  .chip.ok { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .chip.warn { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .chip.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+  .bibtex-block { position: relative; background: #fafafa; border: 1px solid #eee; border-radius: 10px; padding: 1.1rem 1.25rem; overflow-x: auto; }
+  .bibtex-block pre { margin: 0; }
+  .bibtex-block code { display: block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.84rem; color: #333; line-height: 1.65; white-space: pre; }
+  .copy-btn { position: absolute; top: 0.6rem; right: 0.7rem; padding: 0.32rem 0.75rem; font-size: 0.78rem; font-weight: 500; color: #555; background: white; border: 1px solid #d0d0d0; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; font-family: 'Noto Sans', sans-serif; transition: border-color 0.15s, color 0.15s; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { color: #2aa876; border-color: #2aa876; }
+
+  .fadein { animation: fadein 0.3s ease-out; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 720px) { .demo-wrapper { padding: 0 0.8rem; } .demo-section { padding: 2.2rem 1.2rem 2.6rem; border-radius: 18px; } }
+</style>
+</head>
+
+<body>
+
+<!-- ═══ TITLE ═══════════════════════════════════════════════ -->
+<div class="section title-section fadein">
+  <h1 class="project-title">
+    <span class="accent">CompMoE-CFI</span>: Compositional Mixture-of-Experts Neural Network for Compressive Strength Prediction and Sustainable Mix Optimization of Fiber-Reinforced Ultra-High Performance Concrete
+  </h1>
+  <div class="authors">
+    <a href="https://ai4riselab.com" target="_blank">Tadesse G. Wakjira</a><sup>1</sup>
+  </div>
+  <div class="affiliations">
+    <span><sup>1</sup>Kennesaw State University</span>
+  </div>
+  <div class="buttons-row">
+    <a class="btn btn-disabled" href="#" onclick="return false;">Paper <span class="btn-note">(coming soon)</span></a>
+    <a class="btn btn-primary" href="#predictor">Try the predictor</a>
+    <a class="btn" href="https://github.com/twakjira/CompMoE-UHPC" target="_blank"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.05-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22 0 1.6-.02 2.89-.02 3.28 0 .32.22.7.83.58C20.57 22.29 24 17.8 24 12.5 24 5.87 18.63.5 12 .5z"/></svg> Code</a>
+    <a class="btn" href="https://www.sciencedirect.com/science/article/pii/S235234092500900X" target="_blank">Dataset</a>
+  </div>
+</div>
+
+<!-- ═══ ABSTRACT ════════════════════════════════════════════ -->
+<div class="section fadein">
+  <h2>Abstract</h2>
+  <p class="abstract-text">
+    Predicting the 28-day compressive strength ($f_c$) of fiber-reinforced ultra-high performance concrete (UHPC) from its mix design remains challenging due to the complex interactions among binder chemistry, fiber reinforcement, aggregate packing, and curing regime. This paper proposes <strong>CompMoE-CFI</strong>, a compositional mixture-of-experts neural network that decomposes UHPC features into five physically meaningful subsystems and introduces three novel mechanisms: (1) <em>Compositional Attention Gating</em> (CAG), which applies multi-head cross-attention over subsystem embeddings to produce soft expert routing; (2) <em>Physics-Informed Residual Path</em> (PIRP), a learnable linear skip connection that separates near-linear Abrams-law-like behavior from nonlinear interactions; and (3) <em>Hierarchical Expert Diversity</em> (HED), which mixes linear, shallow, and residual experts to match varying compositional complexity. On a cleaned dataset of 1,216 fiber-reinforced UHPC mixes ($f_c \geq 100$ MPa) compiled from approximately 130 published studies, CompMoE-CFI achieves $R^2 = 0.895$ (5-seed, 25-evaluation cross-validation) and a production-ensemble $R^2 = 0.961$ with MAE $= 4.48$ MPa. The trained surrogate is coupled with NSGA-III to generate 90 Pareto-optimal mix designs trading off strength, embodied CO$_2$, and material cost, achieving up to 55% CO$_2$ reduction relative to the dataset mean while maintaining UHPC-class strength.
+  </p>
+</div>
+
+<!-- ═══ METHOD ══════════════════════════════════════════════ -->
+<div class="section fadein">
+  <h2>Method</h2>
+  <p>
+    CompMoE-CFI processes 31 engineered features organized into five compositional subsystems
+    (Binder, Fiber, Aggregate, Environment, Testing). Each subsystem is encoded into a fixed-dimension
+    embedding, and cross-subsystem multi-head attention produces gating weights over $K = 5$
+    heterogeneous experts:
+  </p>
+  <div class="module-list">
+    <p><strong>Compositional Attention Gating (CAG)</strong> &mdash; Per-subsystem encoders feed multi-head
+    self-attention across all five subsystems. The attended embeddings are concatenated, projected,
+    and passed through a softmax with learnable temperature to produce expert routing weights
+    $g_1, \ldots, g_K$.</p>
+    <p><strong>Hierarchical Expert Diversity (HED)</strong> &mdash; Expert 0 is a single linear layer;
+    Experts 1&ndash;2 are shallow-wide networks (one hidden layer); Experts 3&ndash;4 are two-block residual
+    networks with BatchNorm and GELU. The gating network learns to route simple mixes to simple
+    experts and complex mixes to deeper ones.</p>
+    <p><strong>Physics-Informed Residual Path (PIRP)</strong> &mdash; A parallel linear prediction
+    $\hat{y}_{\text{lin}} = \mathbf{w}^\top \mathbf{x} + b$ is combined with the MoE output via a
+    learnable scalar $\alpha$: $\hat{y} = \alpha\, \hat{y}_{\text{lin}} + (1 - \alpha)\,
+    \hat{y}_{\text{MoE}}$. At convergence, $\alpha \approx 0.57$, meaning 57% of the prediction
+    comes from the linear path.</p>
+  </div>
+</div>
+
+<!-- ═══ SUSTAINABILITY OPTIMIZATION ═════════════════════════ -->
+<div class="section fadein">
+  <h2>Sustainability Optimization</h2>
+  <p>
+    The production CompMoE-CFI ensemble ($R^2 = 0.961$, MAE $= 4.48$ MPa) serves as a
+    differentiable surrogate for NSGA-III multi-objective optimization across three objectives:
+    maximize $f_c$, minimize embodied CO$_2$, and minimize material cost.
+  </p>
+</div>
+
+<!-- ═══ INTERACTIVE PREDICTOR ═══════════════════════════════ -->
+<div class="demo-wrapper" id="predictor">
+<section class="demo-section">
+  <div class="demo-inner">
+    <div class="demo-header">
+      <span class="demo-kicker"><span class="live-dot"></span> Prediction Tool</span>
+      <h2>UHPC Compressive Strength Predictor</h2>
+      <p>Adjust mix proportions and predict the 28-day compressive strength, embodied CO2, and material cost using the CompMoE-CFI 5-model production ensemble.</p>
+    </div>
+
+    <!-- Inputs -->
+    <div class="demo-surface">
+      <p class="section-label">Mix design inputs</p>
+      <div class="grid grid-3" id="inputGrid"></div>
+    </div>
+
+    <!-- Predict button -->
+    <div style="text-align:center; margin: 1.2rem 0 1.8rem 0;">
+      <button id="predictBtn" class="btn-predict">Predict</button>
+    </div>
+
+    <!-- Results -->
+    <div id="result"></div>
+  </div>
+</section>
+</div>
+
+<!-- ═══ BIBTEX ══════════════════════════════════════════════ -->
+<div class="section fadein">
+  <h2>BibTeX</h2>
+  <div class="bibtex-block">
+    <button class="copy-btn" id="copy-bibtex" title="Copy to clipboard">Copy</button>
+    <pre><code id="bibtex-text">@article{wakjira2026compmoe,
+    title   = {Compositional Mixture-of-Experts Neural Network for
+               Compressive Strength Prediction and Sustainable Mix
+               Optimization of Fiber-Reinforced Ultra-High Performance
+               Concrete},
+    author  = {Wakjira, Tadesse G.},
+    year    = {2026},
+}</code></pre>
+  </div>
+</div>
+
+<footer>
+  Developed by <a href="https://ai4riselab.com" target="_blank">AI4RISE Lab</a>.
+  Source code and trained weights will be released upon paper acceptance.
+</footer>
+
+<!-- ═══ JAVASCRIPT: Interactive predictor (pure JS forward pass) ═══ -->
+<script>
+const CO2F = { Cement:0.894, 'Silica Fume':0.014, 'Fly Ash':0.009, GGBFS:0.031,
+               'Quartz Powder':0.040, Filler:0.016, Sand:0.002, 'Steel Fiber':1.500,
+               Water:0.0003, SP:0.720 };
+const COSTF = { Cement:82, 'Silica Fume':800, 'Fly Ash':40, GGBFS:100,
+                'Quartz Powder':800, Filler:120, Sand:9, 'Steel Fiber':1000, Water:1, SP:3400 };
+
+const INPUTS = [
+  { key:'cement',    label:'Cement',            unit:'kg/m\u00B3', min:400, max:1200, val:700,  step:10,   group:'Binder' },
+  { key:'sf',        label:'Silica Fume',       unit:'kg/m\u00B3', min:0,   max:300,  val:120,  step:5,    group:'Binder' },
+  { key:'fa',        label:'Fly Ash',           unit:'kg/m\u00B3', min:0,   max:400,  val:50,   step:5,    group:'Binder' },
+  { key:'ggbfs',     label:'GGBFS',             unit:'kg/m\u00B3', min:0,   max:300,  val:30,   step:5,    group:'Binder' },
+  { key:'sand',      label:'Sand',              unit:'kg/m\u00B3', min:600, max:1600, val:1100, step:10,   group:'Aggregate' },
+  { key:'qp',        label:'Quartz Powder',     unit:'kg/m\u00B3', min:0,   max:500,  val:0,    step:10,   group:'Aggregate' },
+  { key:'fiber',     label:'Steel Fiber',       unit:'kg/m\u00B3', min:20,  max:250,  val:80,   step:5,    group:'Fiber' },
+  { key:'fl',        label:'Fiber Length',       unit:'mm',         min:6,   max:30,   val:13,   step:1,    group:'Fiber' },
+  { key:'fd',        label:'Fiber Diameter',     unit:'mm',         min:0.10,max:0.50, val:0.20, step:0.01, group:'Fiber' },
+  { key:'water',     label:'Water',             unit:'kg/m\u00B3', min:100, max:250,  val:160,  step:5,    group:'Environment' },
+  { key:'sp',        label:'Superplasticizer',  unit:'kg/m\u00B3', min:10,  max:60,   val:30,   step:1,    group:'Environment' },
+  { key:'curing',    label:'Curing Temp',        unit:'\u00B0C',   min:20,  max:90,   val:23,   step:1,    group:'Environment' },
+];
+
+/* ── Build input grid ── */
+const grid = document.getElementById('inputGrid');
+let lastGroup = '';
+INPUTS.forEach(inp => {
+  if (inp.group !== lastGroup) {
+    lastGroup = inp.group;
+    const h = document.createElement('div');
+    h.style.gridColumn = '1 / -1';
+    h.className = 'group-heading';
+    h.textContent = inp.group;
+    grid.appendChild(h);
+  }
+  const d = document.createElement('div');
+  d.style.marginBottom = '0.5rem';
+  d.innerHTML = `<label class="field-label"><span>${inp.label}</span><span class="field-unit">${inp.unit}</span></label>
+    <input class="field-input" type="number" id="inp_${inp.key}" value="${inp.val}" min="${inp.min}" max="${inp.max}" step="${inp.step}">`;
+  grid.appendChild(d);
+});
+
+function getVal(key) { return parseFloat(document.getElementById('inp_' + key).value) || 0; }
+
+/* ── Global state: model weights + metadata from inference.js ── */
+let modelState = null;
+
+async function loadModelAssets() {
+  const btn = document.getElementById('predictBtn');
+  btn.textContent = 'Loading model...';
+  btn.disabled = true;
+  try {
+    modelState = await window.CompMoE.loadModel('model.json', 'weights.bin');
+    btn.textContent = 'Predict';
+    btn.disabled = false;
+  } catch (e) {
+    console.error('Model load error:', e);
+    btn.textContent = 'Load failed';
+  }
+}
+
+/* ── Prediction: runs 5-model ensemble via pure JS forward pass ── */
+function predict() {
+  if (!modelState) return;
+
+  const v = {};
+  INPUTS.forEach(i => v[i.key] = getVal(i.key));
+
+  // Run the actual 5-model CompMoE-CFI ensemble
+  const result = window.CompMoE.predictEnsemble(v, modelState.meta, modelState.weights);
+  const fc = result.strength;
+
+  // CO2 and cost (exact factor multiplication)
+  const co2Map = { cement:'Cement', sf:'Silica Fume', fa:'Fly Ash', ggbfs:'GGBFS',
+                   sand:'Sand', fiber:'Steel Fiber', water:'Water', sp:'SP' };
+  let co2 = 0, cost = 0;
+  for (const [k, fk] of Object.entries(co2Map)) {
+    co2 += v[k] * (CO2F[fk] || 0);
+    cost += v[k] * (COSTF[fk] || 0) / 1000;
+  }
+
+  // Derived ratios and constraint checks
+  const tb = v.cement + v.sf + v.fa + v.ggbfs;
+  const wb = tb > 0 ? v.water / tb : 0;
+  const sfc = v.cement > 0 ? v.sf / v.cement : 0;
+  const fvf = v.fiber / 7850;
+  const checks = [];
+  if (wb >= 0.14 && wb <= 0.25) checks.push({ text: `W/B = ${wb.toFixed(3)}`, cls: 'ok' });
+  else checks.push({ text: `W/B = ${wb.toFixed(3)} (out of range)`, cls: 'err' });
+  if (sfc <= 0.40) checks.push({ text: `SF/C = ${sfc.toFixed(3)}`, cls: 'ok' });
+  else checks.push({ text: `SF/C = ${sfc.toFixed(3)} (exceeds 0.40)`, cls: 'err' });
+  if (fvf * 100 <= 4.0) checks.push({ text: `V_f = ${(fvf*100).toFixed(2)}%`, cls: 'ok' });
+  else checks.push({ text: `V_f = ${(fvf*100).toFixed(2)}% (exceeds 4%)`, cls: 'err' });
+
+  const r = document.getElementById('result');
+  r.innerHTML = `
+    <section class="fadein">
+      <p class="section-label">Prediction</p>
+      <div class="grid grid-3" style="margin-bottom: 1rem;">
+        <div class="metric-card primary">
+          <div class="label">Predicted $f_c$</div>
+          <div class="value">${fc.toFixed(1)}<span class="unit">MPa</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Embodied CO$_2$</div>
+          <div class="value">${co2.toFixed(0)}<span class="unit">kg/m$^3$</span></div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Material Cost</div>
+          <div class="value">$${cost.toFixed(0)}<span class="unit">/m$^3$</span></div>
+        </div>
+      </div>
+      <div class="demo-surface">
+        <p class="section-label">Constraint checks</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+          ${checks.map(c => `<span class="chip ${c.cls}">${c.text}</span>`).join('')}
+        </div>
+      </div>
+    </section>`;
+  if (window.renderMathInElement) renderMathInElement(r, {
+    delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],
+    throwOnError: false,
+  });
+}
+
+document.getElementById('predictBtn').addEventListener('click', predict);
+document.getElementById('copy-bibtex').addEventListener('click', function() {
+  navigator.clipboard.writeText(document.getElementById('bibtex-text').textContent);
+  this.textContent = 'Copied';
+  this.classList.add('copied');
+  setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('copied'); }, 2000);
+});
+
+// Wait for inference.js to load, then load weights and run initial prediction
+window.addEventListener('load', async () => {
+  await loadModelAssets();
+  if (modelState) predict();
+});
+</script>
+</body>
+</html>
