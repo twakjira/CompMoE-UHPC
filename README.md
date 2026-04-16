@@ -19,7 +19,7 @@
 </a>
 </p>
 
-**[Tadesse G. Wakjira](https://ai4riselab.com)<sup>1</sup>**
+**[Tadesse G. Wakjira](https://ai4riselab.com)<sup>1</sup>, [Hana L. Goshu](https://www.hanagoshu.com)<sup>1</sup>**
 
 <sup>1</sup>Kennesaw State University
 
@@ -52,7 +52,7 @@ The manuscript is currently **under review**. Full source code, training scripts
     title   = {Compositional Mixture-of-Experts Neural Network for Compressive
                Strength Prediction and Sustainable Mix Optimization of
                Fiber-Reinforced Ultra-High Performance Concrete},
-    author  = {Wakjira, Tadesse G.},
+    author  = {Wakjira, Tadesse G. and Goshu, Hana L.},
     year    = {2026},
     note    = {Under Review}
 }
