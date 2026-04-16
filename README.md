@@ -19,9 +19,9 @@
 </a>
 </p>
 
-**[Tadesse G. Wakjira](https://ai4riselab.com)<sup>1</sup>, [Hana L. Goshu](https://www.hanagoshu.com)<sup>1</sup>**
+**[Tadesse G. Wakjira](https://ai4riselab.com)<sup>1</sup>, [Hana L. Goshu](https://www.hanagoshu.com)<sup>2</sup>**
 
-<sup>1</sup>Kennesaw State University
+<sup>1</sup>Kennesaw State University · <sup>2</sup>The Hong Kong Polytechnic University
 
 *Under Review*
 
