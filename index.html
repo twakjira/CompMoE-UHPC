@@ -15,6 +15,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
 <script defer src="inference.js"></script>
+<script defer src="pareto_data.js"></script>
+<script defer src="topsis.js"></script>
 
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -142,6 +144,33 @@
   .fadein { animation: fadein 0.3s ease-out; }
   @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @media (max-width: 720px) { .demo-wrapper { padding: 0 0.8rem; } .demo-section { padding: 2.2rem 1.2rem 2.6rem; border-radius: 18px; } }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 1.5rem; background: #e8edf3; border-radius: 10px; padding: 4px; }
+  .tab-btn { flex: 1; padding: 0.7rem 0.5rem; font-size: 0.88rem; font-weight: 600; color: #555; background: none; border: none; border-radius: 8px; cursor: pointer; font-family: 'Noto Sans', sans-serif; transition: all 0.15s; }
+  .tab-btn:hover { color: #333; background: rgba(255,255,255,0.5); }
+  .tab-btn.active { color: #1d4ed8; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .mode-desc { font-size: 0.9rem; color: #52607a; margin-bottom: 1.2rem; line-height: 1.5; }
+  .mix-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.8rem 0; }
+  .mix-table th { text-align: left; padding: 0.45rem 0.6rem; background: #f0f4f8; border-bottom: 2px solid #d0d5dd; font-weight: 600; color: #333; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .mix-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee; }
+  .mix-table tr:hover td { background: #f8fbff; }
+  .preset-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .preset-btn { padding: 0.4rem 1rem; font-size: 0.82rem; font-weight: 500; border: 1.5px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; font-family: 'Noto Sans', sans-serif; transition: all 0.15s; }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .preset-btn.active { border-color: var(--accent); background: var(--accent); color: white; }
+  .weight-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .weight-box label { display: block; font-size: 0.82rem; font-weight: 500; color: #444; margin-bottom: 0.3rem; }
+  .weight-box input[type=range] { width: 100%; }
+  .weight-box .wval { font-size: 0.9rem; font-weight: 600; color: var(--accent); }
+  .rank-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0.8rem 0; }
+  .rank-table th { padding: 0.4rem 0.5rem; background: #f0f4f8; border-bottom: 2px solid #d0d5dd; font-size: 0.78rem; font-weight: 600; text-align: left; }
+  .rank-table td { padding: 0.35rem 0.5rem; border-bottom: 1px solid #eee; }
+  .rank-table tr.highlight td { background: #eef4ff; font-weight: 600; }
+  .reset-btn { padding: 0.35rem 0.8rem; font-size: 0.78rem; border: 1px solid #ccc; border-radius: 5px; background: #fafafa; cursor: pointer; font-family: 'Noto Sans'; }
+  .reset-btn:hover { background: #eee; }
+  @media (max-width: 600px) { .weight-row { grid-template-columns: 1fr; } .tab-btn { font-size: 0.78rem; } }
 </style>
 </head>
 
@@ -227,29 +256,88 @@
   </p>
 </div>
 
-<!-- ═══ INTERACTIVE PREDICTOR ═══════════════════════════════ -->
+<!-- ═══ INTERACTIVE MIX DESIGNER ═══════════════════════════ -->
 <div class="demo-wrapper" id="predictor">
 <section class="demo-section">
   <div class="demo-inner">
     <div class="demo-header">
-      <span class="demo-kicker"><span class="live-dot"></span> Prediction Tool</span>
-      <h2>UHPC Compressive Strength Predictor</h2>
-      <p>Adjust mix proportions and predict the 28-day compressive strength, embodied CO2, and material cost using the CompMoE-CFI 5-model production ensemble.</p>
+      <span class="demo-kicker"><span class="live-dot"></span> Mix Designer</span>
+      <h2>UHPC Mix Design Tool</h2>
+      <p>Predict compressive strength, find optimal mixes for a target strength, or balance strength, CO2, and cost using multi-criteria optimization.</p>
     </div>
 
-    <!-- Inputs -->
-    <div class="demo-surface">
-      <p class="section-label">Mix design inputs</p>
-      <div class="grid grid-3" id="inputGrid"></div>
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('predict')">Predict Strength</button>
+      <button class="tab-btn" onclick="switchTab('inverse')">Inverse Design</button>
+      <button class="tab-btn" onclick="switchTab('optimize')">Optimize Mix</button>
     </div>
 
-    <!-- Predict button -->
-    <div style="text-align:center; margin: 1.2rem 0 1.8rem 0;">
-      <button id="predictBtn" class="btn-predict">Predict</button>
+    <!-- ── TAB 1: Forward Prediction ── -->
+    <div class="tab-panel active" id="tab-predict">
+      <p class="mode-desc">Adjust mix proportions to predict the 28-day compressive strength using the CompMoE-CFI 5-model production ensemble.</p>
+      <div class="demo-surface">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <p class="section-label" style="margin:0;">Mix design inputs</p>
+          <button class="reset-btn" onclick="resetMode1()">Reset</button>
+        </div>
+        <div class="grid grid-3" id="inputGrid"></div>
+      </div>
+      <div style="text-align:center; margin: 1.2rem 0 1.8rem 0;">
+        <button id="predictBtn" class="btn-predict">Predict</button>
+      </div>
+      <div id="result"></div>
     </div>
 
-    <!-- Results -->
-    <div id="result"></div>
+    <!-- ── TAB 2: Inverse Design ── -->
+    <div class="tab-panel" id="tab-inverse">
+      <p class="mode-desc">Enter a target 28-day compressive strength. The tool searches 90 Pareto-optimal solutions for the mix with the lowest CO2 that meets your target.</p>
+      <div class="demo-surface">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <p class="section-label" style="margin:0;">Target strength</p>
+          <button class="reset-btn" onclick="resetMode2()">Reset</button>
+        </div>
+        <div style="display:flex; gap:1rem; align-items:center;">
+          <input type="range" id="targetStrength" min="120" max="250" value="200" step="1" style="flex:1;" oninput="runInverse()">
+          <input type="number" id="targetStrengthNum" min="120" max="250" value="200" step="1" class="field-input" style="width:90px;" oninput="document.getElementById('targetStrength').value=this.value; runInverse()">
+          <span style="font-size:0.9rem; color:#555;">MPa</span>
+        </div>
+      </div>
+      <div id="inverseResult" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- ── TAB 3: TOPSIS Optimization ── -->
+    <div class="tab-panel" id="tab-optimize">
+      <p class="mode-desc">Assign weights to three objectives (strength, CO2, cost) and find the best-compromise UHPC mix using TOPSIS multi-criteria decision analysis on 90 Pareto-optimal solutions.</p>
+      <div class="demo-surface">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <p class="section-label" style="margin:0;">Objective weights</p>
+          <button class="reset-btn" onclick="resetMode3()">Reset</button>
+        </div>
+        <div class="preset-row">
+          <button class="preset-btn" onclick="setPreset(0.33,0.33,0.34)">Balanced</button>
+          <button class="preset-btn" onclick="setPreset(0.2,0.6,0.2)">Green</button>
+          <button class="preset-btn" onclick="setPreset(0.6,0.2,0.2)">Performance</button>
+          <button class="preset-btn" onclick="setPreset(0.2,0.2,0.6)">Economy</button>
+        </div>
+        <div class="weight-row">
+          <div class="weight-box">
+            <label>Strength (maximize) <span class="wval" id="wStrVal">0.33</span></label>
+            <input type="range" id="wStr" min="0" max="100" value="33" oninput="updateWeights()">
+          </div>
+          <div class="weight-box">
+            <label>CO2 (minimize) <span class="wval" id="wCO2Val">0.33</span></label>
+            <input type="range" id="wCO2" min="0" max="100" value="33" oninput="updateWeights()">
+          </div>
+          <div class="weight-box">
+            <label>Cost (minimize) <span class="wval" id="wCostVal">0.34</span></label>
+            <input type="range" id="wCost" min="0" max="100" value="34" oninput="updateWeights()">
+          </div>
+        </div>
+      </div>
+      <div id="topsisResult" style="margin-top:1rem;"></div>
+    </div>
+
   </div>
 </section>
 </div>
@@ -275,7 +363,7 @@
   Source code and trained weights will be released upon paper acceptance.
 </footer>
 
-<!-- ═══ JAVASCRIPT: Interactive predictor (pure JS forward pass) ═══ -->
+<!-- ═══ JAVASCRIPT: 3-Mode Mix Designer ═══ -->
 <script>
 const CO2F = { Cement:0.894, 'Silica Fume':0.014, 'Fly Ash':0.009, GGBFS:0.031,
                'Quartz Powder':0.040, Filler:0.016, Sand:0.002, 'Steel Fiber':1.500,
@@ -284,21 +372,32 @@ const COSTF = { Cement:82, 'Silica Fume':800, 'Fly Ash':40, GGBFS:100,
                 'Quartz Powder':800, Filler:120, Sand:9, 'Steel Fiber':1000, Water:1, SP:3400 };
 
 const INPUTS = [
-  { key:'cement',    label:'Cement',            unit:'kg/m\u00B3', min:400, max:1200, val:700,  step:10,   group:'Binder' },
-  { key:'sf',        label:'Silica Fume',       unit:'kg/m\u00B3', min:0,   max:300,  val:120,  step:5,    group:'Binder' },
-  { key:'fa',        label:'Fly Ash',           unit:'kg/m\u00B3', min:0,   max:400,  val:50,   step:5,    group:'Binder' },
-  { key:'ggbfs',     label:'GGBFS',             unit:'kg/m\u00B3', min:0,   max:300,  val:30,   step:5,    group:'Binder' },
-  { key:'sand',      label:'Sand',              unit:'kg/m\u00B3', min:600, max:1600, val:1100, step:10,   group:'Aggregate' },
-  { key:'qp',        label:'Quartz Powder',     unit:'kg/m\u00B3', min:0,   max:500,  val:0,    step:10,   group:'Aggregate' },
-  { key:'fiber',     label:'Steel Fiber',       unit:'kg/m\u00B3', min:20,  max:250,  val:80,   step:5,    group:'Fiber' },
-  { key:'fl',        label:'Fiber Length',       unit:'mm',         min:6,   max:30,   val:13,   step:1,    group:'Fiber' },
-  { key:'fd',        label:'Fiber Diameter',     unit:'mm',         min:0.10,max:0.50, val:0.20, step:0.01, group:'Fiber' },
-  { key:'water',     label:'Water',             unit:'kg/m\u00B3', min:100, max:250,  val:160,  step:5,    group:'Environment' },
-  { key:'sp',        label:'Superplasticizer',  unit:'kg/m\u00B3', min:10,  max:60,   val:30,   step:1,    group:'Environment' },
-  { key:'curing',    label:'Curing Temp',        unit:'\u00B0C',   min:20,  max:90,   val:23,   step:1,    group:'Environment' },
+  { key:'cement', label:'Cement',           unit:'kg/m\u00B3', min:500, max:1100, val:700,  step:10,  group:'Binder' },
+  { key:'sf',     label:'Silica Fume',      unit:'kg/m\u00B3', min:0,   max:300,  val:120,  step:5,   group:'Binder' },
+  { key:'fa',     label:'Fly Ash',          unit:'kg/m\u00B3', min:0,   max:400,  val:50,   step:5,   group:'Binder' },
+  { key:'ggbfs',  label:'GGBFS',            unit:'kg/m\u00B3', min:0,   max:400,  val:30,   step:5,   group:'Binder' },
+  { key:'fiber',  label:'Steel Fiber',      unit:'kg/m\u00B3', min:39,  max:250,  val:80,   step:5,   group:'Fiber' },
+  { key:'fl',     label:'Fiber Length',     unit:'mm',          min:6,   max:30,   val:13,   step:1,   group:'Fiber' },
+  { key:'fd',     label:'Fiber Diameter',   unit:'mm',          min:0.10,max:0.50, val:0.20, step:0.01,group:'Fiber' },
+  { key:'sand',   label:'Sand',             unit:'kg/m\u00B3', min:800, max:1400, val:1100, step:10,  group:'Aggregate' },
+  { key:'qp',     label:'Quartz Powder',    unit:'kg/m\u00B3', min:0,   max:400,  val:0,    step:10,  group:'Aggregate' },
+  { key:'water',  label:'Water',            unit:'kg/m\u00B3', min:100, max:250,  val:160,  step:5,   group:'Environment' },
+  { key:'sp',     label:'Superplasticizer', unit:'kg/m\u00B3', min:10,  max:80,   val:30,   step:1,   group:'Environment' },
+  { key:'curing', label:'Curing Temp',      unit:'\u00B0C',    min:20,  max:90,   val:23,   step:1,   group:'Environment' },
 ];
+const GROUP_COLORS = { Binder:'#1565C0', Fiber:'#E65100', Aggregate:'#2E7D32', Environment:'#C62828' };
 
-/* ── Build input grid ── */
+/* ── Tab switching ── */
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'inverse') runInverse();
+  if (id === 'optimize') runTopsis();
+}
+
+/* ── Build Mode 1 input grid ── */
 const grid = document.getElementById('inputGrid');
 let lastGroup = '';
 INPUTS.forEach(inp => {
@@ -307,6 +406,9 @@ INPUTS.forEach(inp => {
     const h = document.createElement('div');
     h.style.gridColumn = '1 / -1';
     h.className = 'group-heading';
+    h.style.borderLeftColor = GROUP_COLORS[inp.group] || '#777';
+    h.style.borderLeft = '3px solid ' + (GROUP_COLORS[inp.group] || '#777');
+    h.style.paddingLeft = '0.5rem';
     h.textContent = inp.group;
     grid.appendChild(h);
   }
@@ -319,88 +421,199 @@ INPUTS.forEach(inp => {
 
 function getVal(key) { return parseFloat(document.getElementById('inp_' + key).value) || 0; }
 
-/* ── Global state: model weights + metadata from inference.js ── */
+function computeCO2Cost(s) {
+  let co2 = s.cement * CO2F.Cement + (s.silica_fume||s.sf||0) * CO2F['Silica Fume'] +
+    (s.fly_ash||s.fa||0) * CO2F['Fly Ash'] + (s.ggbfs||0) * CO2F.GGBFS +
+    (s.sand||0) * CO2F.Sand + (s.fiber_amount||s.fiber||0) * CO2F['Steel Fiber'] +
+    (s.water||0) * CO2F.Water + (s.superplasticizer||s.sp||0) * CO2F.SP +
+    (s.quartz_powder||s.qp||0) * CO2F['Quartz Powder'] + (s.filler||0) * CO2F.Filler;
+  let cost = s.cement * COSTF.Cement/1000 + (s.silica_fume||s.sf||0) * COSTF['Silica Fume']/1000 +
+    (s.fly_ash||s.fa||0) * COSTF['Fly Ash']/1000 + (s.ggbfs||0) * COSTF.GGBFS/1000 +
+    (s.sand||0) * COSTF.Sand/1000 + (s.fiber_amount||s.fiber||0) * COSTF['Steel Fiber']/1000 +
+    (s.water||0) * COSTF.Water/1000 + (s.superplasticizer||s.sp||0) * COSTF.SP/1000 +
+    (s.quartz_powder||s.qp||0) * COSTF['Quartz Powder']/1000 + (s.filler||0) * COSTF.Filler/1000;
+  return { co2, cost };
+}
+
+function constraintChips(s) {
+  const tb = s.cement + (s.silica_fume||0) + (s.fly_ash||0) + (s.ggbfs||0);
+  const wb = (s.water||0) / Math.max(tb, 1);
+  const sfc = (s.silica_fume||0) / Math.max(s.cement, 1);
+  const scm = ((s.silica_fume||0) + (s.fly_ash||0) + (s.ggbfs||0)) / Math.max(tb, 1);
+  const vf = (s.fiber_amount||0) / 7850;
+  const checks = [];
+  checks.push({ text: 'W/B = ' + wb.toFixed(3), cls: (wb >= 0.14 && wb <= 0.25) ? 'ok' : 'err' });
+  checks.push({ text: 'SF/C = ' + sfc.toFixed(3), cls: sfc <= 0.40 ? 'ok' : 'err' });
+  checks.push({ text: 'SCM = ' + (scm*100).toFixed(1) + '%', cls: scm <= 0.50 ? 'ok' : 'warn' });
+  checks.push({ text: 'Vf = ' + (vf*100).toFixed(2) + '%', cls: vf <= 0.04 ? 'ok' : 'err' });
+  return checks.map(c => `<span class="chip ${c.cls}">${c.text}</span>`).join(' ');
+}
+
+function mixTable(s) {
+  const rows = [
+    ['Cement', s.cement, 'kg/m\u00B3'], ['Silica Fume', s.silica_fume, 'kg/m\u00B3'],
+    ['Fly Ash', s.fly_ash, 'kg/m\u00B3'], ['GGBFS', s.ggbfs, 'kg/m\u00B3'],
+    ['Sand', s.sand, 'kg/m\u00B3'], ['Quartz Powder', s.quartz_powder, 'kg/m\u00B3'],
+    ['Filler', s.filler, 'kg/m\u00B3'], ['Water', s.water, 'kg/m\u00B3'],
+    ['Superplasticizer', s.superplasticizer, 'kg/m\u00B3'],
+    ['Steel Fiber', s.fiber_amount, 'kg/m\u00B3'],
+    ['Fiber Length', s.fiber_length, 'mm'], ['Fiber Diameter', s.fiber_diameter, 'mm'],
+    ['Curing Temp', s.curing_temp, '\u00B0C'],
+  ];
+  return `<table class="mix-table"><thead><tr><th>Material</th><th>Amount</th><th>Unit</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td>${r[0]}</td><td>${typeof r[1]==='number'?r[1].toFixed(1):'-'}</td><td>${r[2]}</td></tr>`).join('') +
+    '</tbody></table>';
+}
+
+function metricsCards(strength, co2, cost, extra) {
+  return `<div class="grid grid-3" style="margin-bottom:1rem;">
+    <div class="metric-card primary"><div class="label">Strength</div><div class="value">${strength.toFixed(1)}<span class="unit">MPa</span></div></div>
+    <div class="metric-card"><div class="label">CO2</div><div class="value">${co2.toFixed(0)}<span class="unit">kg/m\u00B3</span></div></div>
+    <div class="metric-card"><div class="label">Cost</div><div class="value">$${cost.toFixed(0)}<span class="unit">/m\u00B3</span></div></div>
+    ${extra||''}
+  </div>`;
+}
+
+/* ── MODE 1: Forward Prediction ── */
 let modelState = null;
 
 async function loadModelAssets() {
   const btn = document.getElementById('predictBtn');
-  btn.textContent = 'Loading model...';
-  btn.disabled = true;
+  btn.textContent = 'Loading model...'; btn.disabled = true;
   try {
     modelState = await window.CompMoE.loadModel('model.json', 'weights.bin');
-    btn.textContent = 'Predict';
-    btn.disabled = false;
-  } catch (e) {
-    console.error('Model load error:', e);
-    btn.textContent = 'Load failed';
-  }
+    btn.textContent = 'Predict'; btn.disabled = false;
+  } catch (e) { console.error('Model load error:', e); btn.textContent = 'Load failed'; }
 }
 
-/* ── Prediction: runs 5-model ensemble via pure JS forward pass ── */
 function predict() {
   if (!modelState) return;
-
   const v = {};
   INPUTS.forEach(i => v[i.key] = getVal(i.key));
-
-  // Run the actual 5-model CompMoE-CFI ensemble
   const result = window.CompMoE.predictEnsemble(v, modelState.meta, modelState.weights);
   const fc = result.strength;
-
-  // CO2 and cost (exact factor multiplication)
   const co2Map = { cement:'Cement', sf:'Silica Fume', fa:'Fly Ash', ggbfs:'GGBFS',
-                   sand:'Sand', fiber:'Steel Fiber', water:'Water', sp:'SP' };
+                   sand:'Sand', fiber:'Steel Fiber', water:'Water', sp:'SP', qp:'Quartz Powder' };
   let co2 = 0, cost = 0;
   for (const [k, fk] of Object.entries(co2Map)) {
     co2 += v[k] * (CO2F[fk] || 0);
     cost += v[k] * (COSTF[fk] || 0) / 1000;
   }
-
-  // Derived ratios and constraint checks
   const tb = v.cement + v.sf + v.fa + v.ggbfs;
   const wb = tb > 0 ? v.water / tb : 0;
   const sfc = v.cement > 0 ? v.sf / v.cement : 0;
+  const scm = tb > 0 ? (v.sf + v.fa + v.ggbfs) / tb : 0;
   const fvf = v.fiber / 7850;
   const checks = [];
-  if (wb >= 0.14 && wb <= 0.25) checks.push({ text: `W/B = ${wb.toFixed(3)}`, cls: 'ok' });
-  else checks.push({ text: `W/B = ${wb.toFixed(3)} (out of range)`, cls: 'err' });
-  if (sfc <= 0.40) checks.push({ text: `SF/C = ${sfc.toFixed(3)}`, cls: 'ok' });
-  else checks.push({ text: `SF/C = ${sfc.toFixed(3)} (exceeds 0.40)`, cls: 'err' });
-  if (fvf * 100 <= 4.0) checks.push({ text: `V_f = ${(fvf*100).toFixed(2)}%`, cls: 'ok' });
-  else checks.push({ text: `V_f = ${(fvf*100).toFixed(2)}% (exceeds 4%)`, cls: 'err' });
-
+  if (fc < 120) checks.push({ text: 'fc < 120 MPa', cls: 'err' });
+  checks.push({ text: 'W/B = ' + wb.toFixed(3), cls: (wb >= 0.14 && wb <= 0.25) ? 'ok' : 'err' });
+  checks.push({ text: 'SF/C = ' + sfc.toFixed(3), cls: sfc <= 0.40 ? 'ok' : 'err' });
+  checks.push({ text: 'SCM = ' + (scm*100).toFixed(1) + '%', cls: scm <= 0.50 ? 'ok' : 'warn' });
+  checks.push({ text: 'Vf = ' + (fvf*100).toFixed(2) + '%', cls: fvf <= 0.04 ? 'ok' : 'err' });
   const r = document.getElementById('result');
-  r.innerHTML = `
-    <section class="fadein">
-      <p class="section-label">Prediction</p>
-      <div class="grid grid-3" style="margin-bottom: 1rem;">
-        <div class="metric-card primary">
-          <div class="label">Predicted $f_c$</div>
-          <div class="value">${fc.toFixed(1)}<span class="unit">MPa</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="label">Embodied CO$_2$</div>
-          <div class="value">${co2.toFixed(0)}<span class="unit">kg/m$^3$</span></div>
-        </div>
-        <div class="metric-card">
-          <div class="label">Material Cost</div>
-          <div class="value">$${cost.toFixed(0)}<span class="unit">/m$^3$</span></div>
-        </div>
-      </div>
-      <div class="demo-surface">
-        <p class="section-label">Constraint checks</p>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-          ${checks.map(c => `<span class="chip ${c.cls}">${c.text}</span>`).join('')}
-        </div>
-      </div>
-    </section>`;
-  if (window.renderMathInElement) renderMathInElement(r, {
-    delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],
-    throwOnError: false,
-  });
+  r.innerHTML = `<section class="fadein">
+    ${metricsCards(fc, co2, cost)}
+    <div class="demo-surface">
+      <p class="section-label">Derived ratios and constraints</p>
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">${checks.map(c => `<span class="chip ${c.cls}">${c.text}</span>`).join('')}</div>
+    </div>
+  </section>`;
 }
 
-document.getElementById('predictBtn').addEventListener('click', predict);
+function resetMode1() {
+  INPUTS.forEach(inp => { document.getElementById('inp_' + inp.key).value = inp.val; });
+  predict();
+}
+
+/* ── MODE 2: Inverse Design ── */
+function runInverse() {
+  if (typeof PARETO_SOLUTIONS === 'undefined') return;
+  const target = parseFloat(document.getElementById('targetStrength').value);
+  document.getElementById('targetStrengthNum').value = target;
+  const best = window.MixOptimizer.findInverse(PARETO_SOLUTIONS, target);
+  const el = document.getElementById('inverseResult');
+  if (!best) {
+    el.innerHTML = '<div class="demo-surface" style="text-align:center; padding:2rem; color:#991b1b;">No Pareto-optimal solution meets this target. Try reducing the target strength.</div>';
+    return;
+  }
+  el.innerHTML = `<section class="fadein">
+    ${metricsCards(best.strength, best.co2, best.cost)}
+    <div class="demo-surface">
+      <p class="section-label">Recommended mix proportions</p>
+      ${mixTable(best)}
+    </div>
+    <div class="demo-surface">
+      <p class="section-label">Constraint checks</p>
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">${constraintChips(best)}</div>
+    </div>
+  </section>`;
+}
+
+function resetMode2() {
+  document.getElementById('targetStrength').value = 200;
+  document.getElementById('targetStrengthNum').value = 200;
+  runInverse();
+}
+
+/* ── MODE 3: TOPSIS ── */
+function updateWeights() {
+  const s = parseInt(document.getElementById('wStr').value);
+  const c = parseInt(document.getElementById('wCO2').value);
+  const k = parseInt(document.getElementById('wCost').value);
+  const total = s + c + k || 1;
+  document.getElementById('wStrVal').textContent = (s / total).toFixed(2);
+  document.getElementById('wCO2Val').textContent = (c / total).toFixed(2);
+  document.getElementById('wCostVal').textContent = (k / total).toFixed(2);
+  runTopsis();
+}
+
+function setPreset(ws, wc, wk) {
+  document.getElementById('wStr').value = Math.round(ws * 100);
+  document.getElementById('wCO2').value = Math.round(wc * 100);
+  document.getElementById('wCost').value = Math.round(wk * 100);
+  updateWeights();
+}
+
+function runTopsis() {
+  if (typeof PARETO_SOLUTIONS === 'undefined' || typeof MixOptimizer === 'undefined') return;
+  const s = parseInt(document.getElementById('wStr').value);
+  const c = parseInt(document.getElementById('wCO2').value);
+  const k = parseInt(document.getElementById('wCost').value);
+  const total = s + c + k || 1;
+  const w = [s / total, c / total, k / total];
+  const ranked = MixOptimizer.topsis(PARETO_SOLUTIONS, w);
+  const top5 = ranked.slice(0, 5);
+  const best = PARETO_SOLUTIONS[top5[0].idx];
+  const el = document.getElementById('topsisResult');
+  el.innerHTML = `<section class="fadein">
+    ${metricsCards(best.strength, best.co2, best.cost,
+      `<div class="metric-card accent-green"><div class="label">TOPSIS Score</div><div class="value">${top5[0].score.toFixed(3)}</div></div>`)}
+    <div class="demo-surface">
+      <p class="section-label">Optimal mix proportions</p>
+      ${mixTable(best)}
+    </div>
+    <div class="demo-surface">
+      <p class="section-label">Constraint checks</p>
+      <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">${constraintChips(best)}</div>
+    </div>
+    <div class="demo-surface">
+      <p class="section-label">Top 5 solutions</p>
+      <table class="rank-table">
+        <thead><tr><th>Rank</th><th>Strength (MPa)</th><th>CO2 (kg/m\u00B3)</th><th>Cost ($/m\u00B3)</th><th>Score</th></tr></thead>
+        <tbody>
+          ${top5.map((r, i) => {
+            const sol = PARETO_SOLUTIONS[r.idx];
+            return `<tr${i === 0 ? ' class="highlight"' : ''}><td>${i + 1}</td><td>${sol.strength.toFixed(1)}</td><td>${sol.co2.toFixed(0)}</td><td>${sol.cost.toFixed(0)}</td><td>${r.score.toFixed(3)}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function resetMode3() { setPreset(0.33, 0.33, 0.34); }
+
+/* ── BibTeX copy ── */
 document.getElementById('copy-bibtex').addEventListener('click', function() {
   navigator.clipboard.writeText(document.getElementById('bibtex-text').textContent);
   this.textContent = 'Copied';
@@ -408,10 +621,13 @@ document.getElementById('copy-bibtex').addEventListener('click', function() {
   setTimeout(() => { this.textContent = 'Copy'; this.classList.remove('copied'); }, 2000);
 });
 
-// Wait for inference.js to load, then load weights and run initial prediction
+/* ── Init ── */
+document.getElementById('predictBtn').addEventListener('click', predict);
 window.addEventListener('load', async () => {
   await loadModelAssets();
   if (modelState) predict();
+  runInverse();
+  updateWeights();
 });
 </script>
 </body>
