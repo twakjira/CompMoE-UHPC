@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CompMoE-CFI: Compositional Mixture-of-Experts for UHPC Compressive Strength Prediction and Sustainable Mix Optimization</title>
-<meta name="description" content="CompMoE-CFI: a novel compositional mixture-of-experts neural network for UHPC 28-day compressive strength prediction and multi-objective sustainable mix design optimization.">
+<title>CompMoE: Compositional Mixture-of-Experts for UHPC Compressive Strength Prediction and Sustainable Mix Optimization</title>
+<meta name="description" content="CompMoE: a novel compositional mixture-of-experts neural network for UHPC 28-day compressive strength prediction and multi-objective sustainable mix design optimization.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -179,7 +179,7 @@
 <!-- ═══ TITLE ═══════════════════════════════════════════════ -->
 <div class="section title-section fadein">
   <h1 class="project-title">
-    <span class="accent">CompMoE-CFI</span>: Compositional Mixture-of-Experts Neural Network for Compressive Strength Prediction and Sustainable Mix Optimization of Fiber-Reinforced Ultra-High Performance Concrete
+    <span class="accent">CompMoE</span>: Compositional Mixture-of-Experts Neural Network for Compressive Strength Prediction and Sustainable Mix Optimization of Fiber-Reinforced Ultra-High Performance Concrete
   </h1>
   <div class="authors">
     <a href="https://ai4riselab.com" target="_blank">Tadesse G. Wakjira</a><sup>1</sup>,
@@ -201,7 +201,7 @@
 <div class="section fadein">
   <h2>Abstract</h2>
   <p class="abstract-text">
-    Fiber-reinforced ultra-high-performance concrete (UHPC) delivers exceptional mechanical properties, yet its high cement content and steel fiber dosage generate a substantial environmental footprint. This study proposes a <strong>Compositional Mixture-of-Experts (CompMoE)</strong> neural network for predicting the 28-day compressive strength of fiber-reinforced UHPC and for multi-objective sustainable mix optimization. The CompMoE introduces three novel mechanisms that exploit the physics-informed subsystem decomposition of UHPC constituents, including <em>Compositional Attention Gating</em> (CAG), which models interactions among five material subsystems through cross-attention, a <em>Physics-Informed Residual Path</em> (PIRP) that decomposes the prediction into a linear component and a nonlinear expert-routed residual, and <em>Hierarchical Expert Diversity</em> (HED), which assigns experts of varying architectural complexity to different compositional regimes. On the held-out test set, the 10-model CompMoE ensemble achieved an $R^2$ of 0.854, MAE of 9.05 MPa, and RMSE 12.76 MPa. The learned PIRP mixing coefficient ($\alpha = 0.57$) revealed that 57% of the predictive signal resides in a linear transformation of the engineered feature space, with the remaining 43% captured by nonlinear expert routing. The trained surrogate is coupled with the Non-dominated Sorting Genetic Algorithm (NSGA) III multi-objective optimization, which produced Pareto-optimal fiber-reinforced UHPC mixes that simultaneously balance compressive strength, embodied CO$_2$ emissions, and material cost. From this Pareto front, a single preferred mix can be selected through multi-criteria decision-making (MCDM) by assigning relative weights to the three objectives. The balanced knee-point mix achieved 203 MPa with a 40% reduction in embodied CO$_2$ relative to the dataset.
+    Fiber-reinforced ultra-high-performance concrete (UHPC) exhibits exceptional mechanical properties, yet its high cement content and steel fiber dosage generate a substantial environmental footprint. This study proposes a <strong>Compositional Mixture-of-Experts (CompMoE)</strong> neural network for predicting the 28-day compressive strength of fiber-reinforced UHPC and for multi-objective sustainable mix optimization. CompMoE introduces three novel mechanisms that exploit the physics-informed subsystem decomposition of UHPC constituents, including <em>Compositional Attention Gating</em> (CAG), which models interactions among five material subsystems through cross-attention, a <em>Physics-Informed Residual Path</em> (PIRP) that decomposes the prediction into a linear component and a nonlinear expert-routed residual, and <em>Hierarchical Expert Diversity</em> (HED), which assigns experts of varying architectural complexity to different compositional regimes. On the held-out test set, the 10-model CompMoE ensemble achieved an $R^2$ of 0.854, MAE of 9.05 MPa, and RMSE 12.76 MPa. The trained surrogate is coupled with the non-dominated sorting genetic algorithm III (NSGA-III) multi-objective optimization, which resulted in Pareto-optimal fiber-reinforced UHPC mixes that simultaneously balance compressive strength, embodied CO$_2$ emissions, and material cost. From this Pareto front, a single preferred mix can be selected through multi-criteria decision-making (MCDM) by assigning relative weights to the three objectives. The balanced knee-point mix attains a predicted compressive strength of 203 MPa with a 28% reduction in embodied CO$_2$ and a 54% reduction in material cost relative to the means of the compiled database.
   </p>
 </div>
 
@@ -224,21 +224,21 @@
 <div class="section fadein">
   <h2>Method</h2>
   <p>
-    CompMoE-CFI processes 31 engineered features organized into five compositional subsystems
+    CompMoE processes 31 engineered features organized into five compositional subsystems
     (Binder, Fiber, Aggregate, Environment, Testing). Each subsystem is encoded into a fixed-dimension
     embedding, and cross-subsystem multi-head attention produces gating weights over $K = 5$
     heterogeneous experts:
   </p>
   <div class="module-list">
-    <p><strong>Compositional Attention Gating (CAG)</strong> &mdash; Per-subsystem encoders feed multi-head
+    <p><strong>Compositional Attention Gating (CAG):</strong> Per-subsystem encoders feed multi-head
     self-attention across all five subsystems. The attended embeddings are concatenated, projected,
     and passed through a softmax with learnable temperature to produce expert routing weights
     $g_1, \ldots, g_K$.</p>
-    <p><strong>Hierarchical Expert Diversity (HED)</strong> &mdash; Expert 0 is a single linear layer;
-    Experts 1&ndash;2 are shallow-wide networks (one hidden layer); Experts 3&ndash;4 are two-block residual
+    <p><strong>Hierarchical Expert Diversity (HED):</strong> Expert 1 is a single linear layer;
+    Experts 2&ndash;3 are shallow-wide networks (one hidden layer); Experts 4&ndash;5 are two-block residual
     networks with BatchNorm and GELU. The gating network learns to route simple mixes to simple
     experts and complex mixes to deeper ones.</p>
-    <p><strong>Physics-Informed Residual Path (PIRP)</strong> &mdash; A parallel linear prediction
+    <p><strong>Physics-Informed Residual Path (PIRP):</strong> A parallel linear prediction
     $\hat{y}_{\text{lin}} = \mathbf{w}^\top \mathbf{x} + b$ is combined with the MoE output via a
     learnable scalar $\alpha$: $\hat{y} = \alpha\, \hat{y}_{\text{lin}} + (1 - \alpha)\,
     \hat{y}_{\text{MoE}}$. At convergence, $\alpha \approx 0.57$, meaning 57% of the prediction
@@ -250,7 +250,7 @@
 <div class="section fadein">
   <h2>Sustainability Optimization</h2>
   <p>
-    The production CompMoE-CFI ensemble ($R^2 = 0.961$, MAE $= 4.48$ MPa) serves as a
+    The CompMoE ensemble (held-out test $R^2 = 0.854$, MAE $= 9.05$ MPa) serves as a
     differentiable surrogate for NSGA-III multi-objective optimization across three objectives:
     maximize $f_c$, minimize embodied CO$_2$, and minimize material cost.
   </p>
@@ -273,7 +273,7 @@
 
     <!-- ── TAB 1: Forward Prediction ── -->
     <div class="tab-panel active" id="tab-predict">
-      <p class="mode-desc">Adjust mix proportions to predict the 28-day compressive strength using the CompMoE-CFI 5-model production ensemble.</p>
+      <p class="mode-desc">Adjust mix proportions to predict the 28-day compressive strength using the CompMoE ensemble.</p>
       <div class="demo-surface">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
           <p class="section-label" style="margin:0;">Mix design inputs</p>

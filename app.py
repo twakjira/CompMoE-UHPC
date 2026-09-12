@@ -1,6 +1,6 @@
 """
-CompMoE-CFI Web Tool — UHPC Strength Prediction & Sustainable Mix Optimization
-Streamlit app with actual 5-model production ensemble.
+CompMoE Web Tool — UHPC Strength Prediction & Sustainable Mix Optimization
+Streamlit app running the deployed five-model CompMoE surrogate ensemble.
 
 Run: streamlit run app.py
 """
@@ -160,7 +160,7 @@ COST_FACTORS = {
 # ── Load model + normalizer ────────────────────────────────────
 @st.cache_resource
 def load_ensemble():
-    """Load 5 production CompMoE-CFI models and the fitted normalizer."""
+    """Load the five deployed CompMoE surrogate models and the fitted normalizer."""
     ckpt_dir = os.path.join(os.path.dirname(__file__), 'checkpoints')
     device = torch.device('cpu')  # CPU for web
 
@@ -195,7 +195,7 @@ def load_ensemble():
 
 # ── Prediction function ────────────────────────────────────────
 def predict_strength(models, normalizer, device, raw_vals):
-    """Run the actual CompMoE-CFI 5-model ensemble forward pass."""
+    """Run the deployed CompMoE surrogate ensemble forward pass."""
     # Build 31-feature vector
     cement = raw_vals["Cement"]
     sf = raw_vals["Silica Fume"]
@@ -320,12 +320,12 @@ st.set_page_config(
 )
 
 # ── Sidebar ────────────────────────────────────────────────────
-st.sidebar.markdown("## CompMoE-CFI")
+st.sidebar.markdown("## CompMoE")
 st.sidebar.markdown("*UHPC Strength Prediction &\nSustainable Mix Optimization*")
 st.sidebar.divider()
 st.sidebar.markdown(
-    "**Model:** 5-model ensemble\n\n"
-    "**R²** = 0.961 · **MAE** = 4.48 MPa\n\n"
+    "**Model:** CompMoE ensemble\n\n"
+    "**R²** = 0.854 · **MAE** = 9.05 MPa (held-out test)\n\n"
     "**Architecture:** CAG + PIRP + HED\n\n"
     "**Dataset:** 1,216 mixes"
 )
@@ -340,7 +340,7 @@ page = st.sidebar.radio(
 if page == "Strength Predictor":
     models, normalizer, device = load_ensemble()
     st.title("UHPC Compressive Strength Predictor")
-    st.caption("Adjust mix proportions to predict 28-day compressive strength, embodied CO₂, and material cost using the production CompMoE-CFI ensemble.")
+    st.caption("Adjust mix proportions to predict 28-day compressive strength, embodied CO₂, and material cost using the CompMoE ensemble.")
 
     col_input, col_results = st.columns([1.2, 1])
 
@@ -388,9 +388,9 @@ if page == "Strength Predictor":
         m1.metric("Strength", f"{strength_pred:.0f} MPa",
                    delta=f"{strength_pred - 160:.0f} vs mean" if abs(strength_pred - 160) > 1 else None)
         m2.metric("CO₂", f"{co2_total:.0f} kg/m³",
-                   delta=f"{co2_total - 1150:.0f} vs mean", delta_color="inverse")
+                   delta=f"{co2_total - 953:.0f} vs mean", delta_color="inverse")
         m3.metric("Cost", f"${cost_total:.0f}/m³",
-                   delta=f"${cost_total - 400:.0f} vs mean", delta_color="inverse")
+                   delta=f"${cost_total - 540:.0f} vs mean", delta_color="inverse")
 
         st.markdown("#### Key Ratios")
         r1, r2, r3, r4 = st.columns(4)
@@ -421,7 +421,7 @@ if page == "Strength Predictor":
                                xaxis_title="kg CO₂-eq/m³", font=dict(size=12))
         st.plotly_chart(fig_co2, use_container_width=True)
 
-        st.success("Prediction from the full CompMoE-CFI 5-model ensemble (R² = 0.961, MAE = 4.48 MPa)")
+        st.success("Prediction from the deployed CompMoE ensemble (held-out test R² = 0.854, MAE = 9.05 MPa)")
 
 
 # ── PARETO PAGE ────────────────────────────────────────────────
@@ -473,11 +473,11 @@ elif page == "Pareto Solutions":
 
 # ── ABOUT PAGE ─────────────────────────────────────────────────
 elif page == "About":
-    st.title("About CompMoE-CFI")
+    st.title("About CompMoE")
     st.markdown("""
     ### Architecture
 
-    CompMoE-CFI decomposes UHPC input features into **five physically meaningful subsystems**
+    CompMoE decomposes UHPC input features into **five physically meaningful subsystems**
     (Binder, Fiber, Aggregate, Environment, Testing) and processes them through three
     novel mechanisms:
 
@@ -492,9 +492,9 @@ elif page == "About":
 
     | Metric | Value |
     |--------|-------|
-    | R² (production) | 0.961 |
-    | MAE | 4.48 MPa |
-    | RMSE | 6.72 MPa |
+    | R² (held-out test) | 0.854 |
+    | MAE | 9.05 MPa |
+    | RMSE | 12.76 MPa |
     | R² (25-eval CV) | 0.895 ± 0.019 |
     | Dataset | 1,216 mixes from ~130 studies |
 
